@@ -1,48 +1,50 @@
 <?php
 // Variabili globali
-$timeout = 60;											// timeout in secondi
-$pausaWrong = 1;										// Pausa se utente errato
-$sep = "*";												// Separatore
-$keystrval   = "11111111111111111111111111111111";		// Password (fittizia) 32 caratteri 
+$timeout = 60; // timeout in secondi
+$pausaWrong = 1; // Pausa se utente errato
+$sep = "*"; // Separatore
+$keystrval = "11111111111111111111111111111111"; // Password (fittizia) 32 caratteri
 
-$host="127.0.0.1";										// Server name
-$username="root";										// Mysql username DA CAMBIARE
-$password="";											// Mysql password DA AGGIORNARE
+$host = "127.0.0.1"; // Server name
+$username = "root"; // Mysql username DA CAMBIARE
+$password = ""; // Mysql password DA AGGIORNARE
 
-$db_name="my_fred68";									// Nome database per il login
-$pertdb = "pert01";										// Nome database del pert (eventualmente identico)
+$db_name = "my_fred68"; // Nome database per il login
+$pertdb = "pert01"; // Nome database del pert (eventualmente identico)
 
-$tbl_name="members";									// Tabella utenti
-$tbl_log="logged";										// Tabella log
+$tbl_name = "members"; // Tabella utenti
+$tbl_log = "logged"; // Tabella log
 
-$pwdColumn="passwd";									// Nome della colonna con la password criptata
-$keystr="keystr";										// Nome colonna con chiave di criptatura
-$pwddb="pwddb";											// Nome colonna con password database
-$usrColumn="usrname";									// Nome della colonna utente (anche per la tabella $tbl_log)
-$sidColumn="sid";										// Nome della colonna con session_id
-$lgtmColumn="lgtm";										// Nome della colonna con log time
-
-
-function serverPost($t1, $t2, $sec)						// FUNZIONE DI PROVA
+$pwdColumn = "passwd"; // Nome della colonna con la password criptata
+$keystr = "keystr"; // Nome colonna con chiave di criptatura
+$pwddb = "pwddb"; // Nome colonna con password database
+$usrColumn = "usrname"; // Nome della colonna utente (anche per la tabella $tbl_log)
+$sidColumn = "sid"; // Nome della colonna con session_id
+$lgtmColumn = "lgtm"; // Nome della colonna con log time
+$lstlgColumn = "lstlg";
+ // Nome della colonna con last log
+function serverPost($t1, $t2, $sec) // FUNZIONE DI PROVA
 	{
 	sleep($sec);
-	$txt = $t1."\n".$t2."\n".microtime();
+	$txt = $t1 . "\n" . $t2 . "\n" . microtime();
 	return $txt;
 	}
-function addpadding($string, $blocksize = 32)			// Aggiunge padding PKCS7
-	{													// Thanks to http://blog.djekldevelopments.co.uk/?p=334)
-    $pad = $blocksize - (strlen($string) % $blocksize);
-    $string .= str_repeat(chr($pad), $pad);
-    return $string;
+
+function addpadding($string, $blocksize = 32) // Aggiunge padding PKCS7
+	{ // Thanks to http://blog.djekldevelopments.co.uk/?p=334)
+	$pad = $blocksize - (strlen($string) % $blocksize);
+	$string .= str_repeat(chr($pad), $pad);
+	return $string;
 	}
-function strippadding($string)							// Elimina padding
-	{													// Thanks to http://blog.djekldevelopments.co.uk/?p=334)
-	$slast = ord(substr($string, -1));
+
+function strippadding($string) // Elimina padding
+	{ // Thanks to http://blog.djekldevelopments.co.uk/?p=334)
+	$slast = ord(substr($string, - 1));
 	$slastc = chr($slast);
-	$pcheck = substr($string, -$slast);
-	if(preg_match("/$slastc{".$slast."}/", $string))
+	$pcheck = substr($string, - $slast);
+	if(preg_match("/$slastc{" . $slast . "}/", $string))
 		{
-		$string = substr($string, 0, strlen($string)-$slast);
+		$string = substr($string, 0, strlen($string) - $slast);
 		return $string;
 		}
 	else
@@ -50,23 +52,25 @@ function strippadding($string)							// Elimina padding
 		return false;
 		}
 	}
-function encrypt($string="")							// Criptatura messaggio
+
+function encrypt($string = "") // Criptatura messaggio
 	{
 	global $sep;
 	$msg = "";
 	if(isset($_SESSION['keystr']))
 		{
 		$keystrval = $_SESSION['keystr'];
-		$enc = "";											// Messaggio criptato (inizializzato a zero)
-		$size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC);	// Dimensione dell'iv
-		$ivstrauto = mcrypt_create_iv ($size);				// Creazione di un iv casuale [in quale formato ?]
+		$enc = ""; // Messaggio criptato (inizializzato a zero)
+		$size = mcrypt_get_iv_size(MCRYPT_RIJNDAEL_256, MCRYPT_MODE_CBC); // Dimensione dell'iv
+		$ivstrauto = mcrypt_create_iv($size); // Creazione di un iv casuale [in quale formato ?]
 		$key = base64_decode($keystrval);
-		$enc = mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, addpadding($string), MCRYPT_MODE_CBC, $ivstrauto);	// Codifica
-		$msg = base64_encode($enc).$sep.base64_encode($ivstrauto);				// Unisce messaggio criptato, sepratore e iv
+		$enc = mcrypt_encrypt(MCRYPT_RIJNDAEL_256, $key, addpadding($string), MCRYPT_MODE_CBC, $ivstrauto); // Codifica
+		$msg = base64_encode($enc) . $sep . base64_encode($ivstrauto); // Unisce messaggio criptato, sepratore e iv
 		}
-    return $msg;
+	return $msg;
 	}
-function decrypt($msg = "")								// Decriptatura messaggio
+
+function decrypt($msg = "") // Decriptatura messaggio
 	{
 	global $sep;
 	$ret = "";
@@ -74,186 +78,286 @@ function decrypt($msg = "")								// Decriptatura messaggio
 		{
 		$keystrval = $_SESSION['keystr'];
 		$key = base64_decode($keystrval);
-		$iv = substr($msg, strrpos($msg, $sep) + 1);		// Estrae l'iv
-		$msg = str_replace($sep.$iv, "", $msg);				// Elimina iv e separatore
+		$iv = substr($msg, strrpos($msg, $sep) + 1); // Estrae l'iv
+		$msg = str_replace($sep . $iv, "", $msg); // Elimina iv e separatore
 		$string = base64_decode($msg);
 		$ret = strippadding(mcrypt_decrypt(MCRYPT_RIJNDAEL_256, $key, $string, MCRYPT_MODE_CBC, base64_decode($iv)));
 		}
 	return $ret;
 	}
-function connectIntDB(&$err, &$msg)
+
+function connectIntDB(&$err) // Connette al database interno
 	{
 	global $host, $db_name, $username, $password;
 	$conn = null;
 	$ok = false;
 	try
-		{												// Apre connessione a database
+		{ // Apre connessione a database
 		$conn = new PDO("mysql:host=$host;dbname=$db_name", $username, $password);
 		$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 		$ok = true;
 		}
-	catch(PDOException $e)								// Se errore, chiude la connessione
+	catch (PDOException $e) // Se errore, chiude la connessione
 		{
 		$err .= $e->getMessage();
 		$conn = null;
 		}
 	return $conn;
 	}
-function login($usr,$pwd)								// Connette l'utente
+
+function countUsers($uname, $upwd, $con, &$err) // Conta gli utenti del database interno, con nome $uname e password $upwd
 	{
-	#warning 	RISCRIVERE MEGLIO TUTTA LA FUNZIONE ED ESAMINARE BENE I CASI (PROBABILE ERRORE). POI SEMPLIFICARE ED USARE FUNZIONI SEPARATE
+	global $tbl_name, $usrColumn, $pwdColumn;
+	$cnt = 0;
+	if($con != null)
+		{
+		$sql = "SELECT COUNT(*) FROM $tbl_name WHERE " . $usrColumn . "='$uname' AND " . $pwdColumn . "='$upwd'";
+		try
+			{
+			$stmt = $con->prepare($sql);
+			$stmt->execute();
+			$cnt = $stmt->fetchColumn(); // Ottiene il numero di record con utente e pwd (criptata) -> $count
+			}
+		catch (PDOException $e)
+			{
+			$err .= $e->getMessage();
+			$cnt = 0;
+			}
+		}
+	return $cnt;
+	}
+
+function getUserKeyPwd($uname, $upwd, $con, &$key, &$dbpw, &$err) // Legge keystring e dbPassword dell'utente $uname con password $upwd, da database interno
+	{
+	global $usrColumn, $pwdColumn, $tbl_name, $keystr, $pwddb;
+	$ok = false;
+	if($con != null)
+		{
+		$sql = "SELECT " . $keystr . ", " . $pwddb . " FROM $tbl_name WHERE " . $usrColumn . "='$uname' AND " . $pwdColumn . "='$upwd'";
+		try
+			{
+			$stmt = $con->prepare($sql);
+			$stmt->execute();
+			$rows = $stmt->fetchAll(); // Estrae tutte le righe della query
+			$row = $rows[0]; // Sceglie la prima (ed unica)
+			$key = $row[0]; // Legge la chiave
+			$dbpw = $row[1]; // Legge la password del db
+			$ok = true;
+			}
+		catch (PDOException $e)
+			{
+			$err .= $e->getMessage();
+			$ok = false;
+			}
+		}
+	return $ok;
+	}
+
+function countLoggedUsers($uname, $con, &$err, $sID = null) // Conta gli connessi con $uname (e $sID eventuale)
+	{
+	global $usrColumn, $tbl_log, $sidColumn;
+	$cnt = 0;
+	if($con != null)
+		{
+		$sql = "SELECT COUNT(*) FROM $tbl_log WHERE " . $usrColumn . "='$uname'";
+		
+		if($sID != null)
+			{
+			$sql .= " AND " . $sidColumn . " = '" . $sID . "'";
+			}
+		
+		try
+			{
+			$stmt = $con->prepare($sql);
+			$stmt->execute();
+			$cnt = $stmt->fetchColumn(); // Ottiene il numero di record con utente e pwd (criptata) -> $count
+			}
+		catch (PDOException $e)
+			{
+			$err .= $e->getMessage();
+			$cnt = 0;
+			}
+		}
+	return $cnt;
+	}
+
+function insertLoggedUser($uname, $id, $con, &$err) // Inserisce i dati dell'utente connesso
+	{
+	global $usrColumn, $tbl_log, $sidColumn;
+	
+	$sql = "INSERT INTO " . $tbl_log . "(" . $sidColumn . ", " . $usrColumn . ") VALUES('" . $id . "', '" . $uname . "')";
+	$ok = false;
+	try
+		{
+		$stmt = $con->prepare($sql);
+		$stmt->execute();
+		$ok = true;
+		}
+	catch (PDOException $e)
+		{
+		$err .= "Error: " . $e->getMessage();
+		$ok = false;
+		}
+	return $ok;
+	}
+
+function updateLoggedUser($uname, $id, $con, &$err) // Aggiorna il tempo dell'ultimo update dell'utente connesso
+	{
+	global $usrColumn, $tbl_log, $sidColumn, $lstlgColumn;
+	
+	$sql = "UPDATE " . $tbl_log . " SET " . $lstlgColumn . "=null WHERE " . $usrColumn . "='" . $uname . "' AND " . $sidColumn . "='" . $id . "'";
+	$ok = false;
+	try
+		{
+		$stmt = $con->prepare($sql);
+		$stmt->execute();
+		$ok = true;
+		}
+	catch (PDOException $e)
+		{
+		$err .= "Error: " . $e->getMessage();
+		$ok = false;
+		}
+	return $ok;
+	}
+	
+function removeLoggedUser($uname, $con, &$err, &$msg, $sID = null) // Elimina tutti gli utenti collegati con $uname (e $sID eventuale) 
+	{
+	global $usrColumn, $tbl_log, $sidColumn;
+	
+	$sql = "DELETE FROM " . $tbl_log . " WHERE " . $usrColumn . " = '" . $uname . "'";
+	if($sID != null)
+		{
+		$sql .= " AND " . $sidColumn . " = '" . $sID . "'";
+		}
+		
+	
+	$ok = false;
+	try
+		{
+		$stmt = $con->prepare($sql);
+		$stmt->execute();
+		$ok = true;
+		}
+	catch (PDOException $e)
+		{
+		$err .= "Error: " . $e->getMessage();
+		$ok = false;
+		}
+	
+	return $ok;
+	}
+
+function login($usr, $pwd) // Connette l'utente
+	{
 	global $username, $password, $db_name, $host, $usrColumn, $pwdColumn, $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn;
 	$msg = "";
 	$err = "";
-	$conn = connectIntDB($err, $msg);	
-
-	$myusername=preg_replace("/[^a-zA-Z0-9@.]+/", "", $usr);			// Filtra...
-	$mypassword=sha1(preg_replace("/[^a-zA-Z0-9@.]+/", "", $pwd));		// ...solo alfanumerico, punto e chiocciola
-	$count=0;															// Numero utenti trovati
-	$logcount=0;														// Numero utenti loggati trovati
-	if($conn!=null)
-		{
-		$sql="SELECT COUNT(*) FROM $tbl_name WHERE ".$usrColumn."='$myusername' AND ".$pwdColumn."='$mypassword'";
-		try
-			{
-			$stmt = $conn->prepare($sql);
-			$stmt->execute();
-			$count=$stmt->fetchColumn();					// Ottiene il numero di record con utente e pwd (criptata) -> $count
-			}
-		catch(PDOException $e)
-			{
-			$err .= $e->getMessage();						// Se errore, chide la connessione
-			$conn = null;
-			}
-		}
-	if($count>0)						// Se trova almeno un record con utente e password, legge chiave e password della prima riga trovata e... 
-		{								// ...lascia aperta la connessione
-		$sql="SELECT ".$keystr.", ".$pwddb." FROM $tbl_name WHERE ".$usrColumn."='$myusername' AND ".$pwdColumn."='$mypassword'";
-		try
-			{
-			$stmt = $conn->prepare($sql);
-			$stmt->execute();
-			$rows = $stmt->fetchAll();				// Estrae tutte le righe della query
-			$row = $rows[0];						// Sceglie la prima (ed unica)
-			$keystrval = $row[0];					// Legge la chiave
-			$pwddbval = $row[1];					// Legge la password del db
-			}
-		catch(PDOException $e)						// Se errore, chide la connessione
-			{
-			$err .= $e->getMessage();
-			$conn = null;							
-			}
-		}
-	else											// Se non ci sono utenti 
-		{
-		$conn = null;								// Chiude la connessione	
-		}
-	if($conn!=null)									// Se la connessione è aperta, prosegue...
-		{
-		$sql="SELECT COUNT(*) FROM $tbl_log WHERE ".$usrColumn."='$myusername'";
-		try
-			{
-			$stmt = $conn->prepare($sql);
-			$stmt->execute();
-			$logcount=$stmt->fetchColumn();			// Ottiene il numero di record utenti loggati -> $logcount
-			}
-		catch(PDOException $e)						// Se errore, chiude la connessione
-			{
-			$err .= $e->getMessage();
-			$conn = null;
-			}
-		if($logcount>0)								// Se già connesso, azzera il conteggio (a -1, per distiguerlo)
-			{
-			$err .= $logcount." utenti ".$myusername." gia` connessi";
-			$count = -1;
-			}
-		}
-	if($count==1)									// Login corretto, solo un utente
-		{
-		if(!isset($_SESSION['usr']))				// Se $_SESSION['usr'] non esiste ancora, allora la imposta
-			{
-			$_SESSION['usr'] = $myusername;
-			$_SESSION['loginTime'] = time();
-			$_SESSION['lastTime'] = time();
-			$_SESSION['keystr'] = $keystrval;
-			$_SESSION['pwddb'] = $pwddbval;
-			
-			// Inserisce l'utente nella lista degli utenti 'loggati'
-			$sql = "INSERT INTO ".$tbl_log."(".$sidColumn.", ".$usrColumn.") VALUES('".session_id()."', '".$myusername."')";
-			try
-				{
-				$stmt = $conn->prepare($sql);
-				$stmt->execute();
-				$msg .= "Login completato: ".$_SESSION['usr']."\nsid: ".session_id();	// Se tutto ok, imposta il messaggio
-				}
-			catch(PDOException $e)
-				{
-				$err .= "Error: ".$e->getMessage();
-				}
-			}
-		else										// Se $_SESSION['usr'] esiste, un login è già stato eseguito.  
-			{
-			$err .= "Login gia` eseguito";
-			$count = -1;
-			}
-		}
-	else
-		{
-		if($count==0)
-			{
-			$err .= "Utente o password errati";
-			}
-		else if($count==-1)
-			{
-			$err .= "Login gia` eseguito";	
-			}
-		session_unset();
-		session_destroy();
-		}
-	$conn = null;								// Disconnette dal database
-	return "MESSAGGIO\n".$msg."\nERRORI\n".$err;
-	}
-
-#warning SE SI ESEGUE UN SECONDO LOGIN, SI CREA UNA NUOVA CONNESSIONE (CHE FALLISCE) MA SI PERDE LA PRIMA
-#warning AGGIUNGERE FUNZIONE DI CLEANUP E CHIAMATA, PER DISCONNETTERE UTENTE SENZA ESSERSI CONNESSI
-#warning AGGIUNGERE, SE POSSIBILE, UNA RISPOSTA DI CONFERMA O DI DINIEGO (CRIPTATA) AL LOGIN
-#warning Nel primo login viene inviata la password su connessione nonp protetta.
-#warning Prevedere handshaking dopo il primo login: se login ok -> invia risposta criptata e di mette in attesa -> poi riceve risposta criptata -> se errore: disconnette
 	
-function logout()										// Disconnette l'utente
+	$conn = connectIntDB($err); // Connessione al database interno
+	$myusername = preg_replace("/[^a-zA-Z0-9@.]+/", "", $usr); // Filtra...
+	$mypassword = sha1(preg_replace("/[^a-zA-Z0-9@.]+/", "", $pwd)); // ...solo alfanumerico, punto e chiocciola
+	$count = 0; // Numero utenti trovati
+	$logcount = 0; // Numero utenti loggati trovati
+	
+	$count = countUsers($myusername, $mypassword, $conn, $err); // Numero utenti registrati nel database
+	if($count > 0) // Se trova almeno un record con utente e password, legge chiave e password della prima riga trovata e...
+		{ // ...lascia aperta la connessione
+		$keystrval = "";
+		$pwddbval = "";
+		$ret = getUserKeyPwd($myusername, $mypassword, $conn, $keystrval, $pwddbval, $err);
+		if(! $ret)
+			$conn = null;
+		}
+	else // Se non ci sono utenti ($count == 0)
+		{
+		$conn = null; // Chiude la connessione
+		$err .= "Utente o password errati";
+		}
+
+	if($conn != null) // Se la connessione è aperta, prosegue. Imposta $count = -1 se c'è un errore
+		{
+		$logcount = countLoggedUsers($myusername, $conn, $err); // Conta gli utenti connessi con stesso username
+		if($logcount > 0) // Se già connesso, azzera il conteggio (a -1, per distiguerlo)
+			{
+			$err .= $logcount . " utenti " . $myusername . " gia` connessi";
+			$count = - 1;	// Imposta come se non avesse trovato uetenti registrati
+			}
+		if($count == 1) // Login corretto, solo un utente registrato
+			{
+			if(! isset($_SESSION['usr'])) // Se $_SESSION['usr'] non esiste ancora, allora la imposta
+				{
+				$_SESSION['usr'] = $myusername;
+				$_SESSION['loginTime'] = time();
+				$_SESSION['lastTime'] = time();
+				$_SESSION['keystr'] = $keystrval;
+				$_SESSION['pwddb'] = $pwddbval;
+				
+				$ok = insertLoggedUser($myusername, session_id(), $conn, $err); // Inserisce l'utente nella lista degli utenti 'loggati'
+				if($ok == true)
+					{
+					$msg .= $_SESSION['usr'] . "\n" . session_id(); // Se tutto ok, invia usr e sID separati da un return
+					}
+				else
+					{
+					$count = -1;
+					}
+				}
+			else // Se $_SESSION['usr'] esiste, un login è già stato eseguito.
+				{
+				$err .= "Login gia` eseguito";
+				$count = - 1;
+				}
+			}
+		}
+	
+	if($count < 1)
+		{
+		logout();
+		}
+	
+	$conn = null; // Disconnette dal database
+	#warning IMPOSTA LA VARIABILE DI SESSIONE Waiting a now()
+	// ....
+	// Invia risposta criptata (deve contenere $sID e utente, o altro)
+	
+	return "Errori: ".$err."\n".encrypt($msg);
+
+	// Poi usare un'altra funzione: unlock, che deve ricevere i dati ricevuti prima e confrontarli (criptati).
+	// confrontarli con le variabili si sessione, confronrtare now() con waiting e, se inferiore a qualche secondo,
+	// sbloccare waiting.
+	
+	}
+	
+	#warning AGGIUNGERE CLAUSOLA SU NOW()-LASTTIME > 2*TIMEOUT in removeLoggedUser
+	#warning RISCRIVERE MEGLIO TUTTA LA FUNZIONE ED ESAMINARE BENE I CASI (PROBABILE ERRORE). POI SEMPLIFICARE ED USARE FUNZIONI SEPARATE
+	#warning AGGIUNGERE, SE POSSIBILE, UNA RISPOSTA DI CONFERMA O DI DINIEGO (CRIPTATA) AL LOGIN, con necessità di risposta
+	#warning Nel primo login viene inviata la password su connessione non protetta.
+	#warning Prevedere handshaking dopo il primo login: se login ok -> invia risposta criptata e di mette in attesa -> poi riceve risposta criptata -> se errore: disconnette
+	#warning Inviare la password criptata non con sha1() ma con una funzione più complessa, e confrontarla con il valore criptato una seconda volta
+	#warning Risposta codificata al refresh per sapere se è ancora connesso o no (il programma in C# mostra se è connesso o no) 
+	
+function logout() // Disconnette l'utente
 	{
-	global $username, $password, $db_name, $host, $usrColumn, $pwdColumn, $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn;
+	global $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn;
 	$msg = "";
 	$conn = null;
+	$err = "";
 	if(isset($_SESSION['usr']))
 		{
-		try
-			{
-			$conn = new PDO("mysql:host=$host;dbname=$db_name", $username, $password);
-			$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-			}
-		catch(PDOException $e)
-			{
-			$msg = $e->getMessage()."\nFallita connessione al DB per logout()";
-			$conn = null;
-			}
+		$conn = connectIntDB($err);
 		if($conn != null)
 			{
-			$sql = "DELETE FROM ".$tbl_log." WHERE ".$usrColumn." = '".$_SESSION['usr']."'";
-			try
-				{
-				$stmt = $conn->prepare($sql);
-				$stmt->execute();
-				}
-			catch(PDOException $e)
-				{
-				$msg .= "Error: ".$e->getMessage();
-				}	
+			removeLoggedUser($_SESSION['usr'], $conn, $err, $msg, session_id()); // Elimina, senza controllare il risultato (usa $err)
 			}
 		$conn = null;
 		session_unset();
 		session_destroy();
 		$msg .= "Utente disconnesso.";
+		if($err != "")
+			{
+			$msg .= "\nERRORE: " . $err;
+			}
 		}
 	else
 		{
@@ -261,26 +365,76 @@ function logout()										// Disconnette l'utente
 		}
 	return $msg;
 	}
-function refreshStat()									// Stato della connessione
+
+function clearlogged($usr, $pwd)
+	{
+	global $usrColumn, $pwdColumn, $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn;
+	$msg = "";
+	$err = "";
+	$conn = null;
+	
+	$conn = connectIntDB($err); // Connessione al database interno
+	$msg .= "Clearing logged " . $usr . " users\n";
+	$myusername = preg_replace("/[^a-zA-Z0-9@.]+/", "", $usr); // Filtra...
+	$mypassword = sha1(preg_replace("/[^a-zA-Z0-9@.]+/", "", $pwd)); // ...solo alfanumerico, punto e chiocciola
+	if(isset($_SESSION['usr'])) // Se utente gia` connesso, lo aggiunge al messaggio
+		{
+		$msg .= "Utente: " . $_SESSION['usr'] . " gia` connesso\n";
+		}
+	else // Se non è connesso, lo ricerca nel database,
+		{ // come se aprisse un nuovo login
+		$count = 0; // Numero utenti trovati
+		$count = countUsers($myusername, $mypassword, $conn, $err); // Numero utenti nel database
+		if($count < 1) // Se ci sono utenti
+			{
+			$conn = null; // Disconnette dal database
+			}
+		}
+	if($conn != null) // Se è connesso o se utente e password sono corretti
+		{
+		$logcount = countLoggedUsers($myusername, $conn, $err); // Conta gli utenti connessi con stesso username
+		$msg .= "\n" . $logcount . " utenti gia` connessi.";
+		removeLoggedUser($myusername, $conn, $err, $msg); // Elimina, senza controllare il risultato (usa $err)
+		$msg .= " Rimossi.";
+		}
+	return $msg;
+	}
+
+function refreshStat($stat = false) // Stato della connessione (se $stat==true: restituisce dettagli)
 	{
 	global $timeout;
 	$msg = "";
-	if (isset($_SESSION['usr']))
+	$err = "";
+	if(isset($_SESSION['usr'])) // Se è connesso...
 		{
-		$tt = time()-$_SESSION['lastTime'];
+		$tt = time() - $_SESSION['lastTime']; // ...verifica il tempo dall'ultimo refresh
 		$_SESSION['lastTime'] = time();
-		if($tt > $timeout)
+		if($tt > $timeout) // Se il tempo è scaduto, chiude la sessione
 			{
-			$msg = "Trascorsi ".$tt." secondi. Timeout dopo ".$timeout."s.";
-			session_unset();
-			session_destroy();
+			if($stat)
+				$msg = "Trascorsi " . $tt . " secondi. Timeout dopo " . $timeout . "s.";
+			logout();
 			}
-		else
+		else	// Se il tempo non è scaduto, controlla se utente e sessione sono ancora nel database
 			{
-			$msg = "Utente: ".$_SESSION['usr']."\n";
-			$msg .="Session: ".session_id()."\n";
-			$msg .= "Tempo trascorso dal login: ".(time()-$_SESSION['loginTime'])."\n";
-			$msg .= "Tempo trascorso da ultima operazione: ".$tt;
+			$conn = connectIntDB($err);
+			$cnt = countLoggedUsers($_SESSION['usr'], $conn, $err, session_id());
+			if($cnt > 0)	// Se è nel database (non verifica la differenza di tempo nel database, perchè ha cercato utente e session id)...
+				{
+				updateLoggedUser($_SESSION['usr'], session_id(), $conn, $err);	// ...aggiorna il log
+				if($stat)
+					{
+					$msg = "Utente: " . $_SESSION['usr'] . "\n";
+					$msg .= "Session: " . session_id() . "\n";
+					$msg .= "Tempo trascorso dal login: " . (time() - $_SESSION['loginTime']) . "\n";
+					$msg .= "Tempo trascorso da ultima operazione: " . $tt;
+					$msg .= "\nERRORE MYSQL:\n" . $err;
+					}
+				}
+			else	// Se non è più nel database
+				{
+				logout();
+				}
 			}
 		}
 	else
@@ -291,48 +445,27 @@ function refreshStat()									// Stato della connessione
 		}
 	return $msg;
 	}
-function refresh()										// Refresh. Messaggio solo se errori
+
+function execute($cmd = "") // Esecuzione di un comando
 	{
-	global $timeout;
-	$msg = "";
-	if (isset($_SESSION['usr']))
-		{
-		$tt = time()-$_SESSION['lastTime'];
-		$_SESSION['lastTime'] = time();
-		if($tt > $timeout)
-			{
-			session_unset();
-			session_destroy();
-			$msg = "Tempo scaduto";
-			}
-		}
-	else
-		{
-		session_unset();
-		session_destroy();
-		$msg = "Utente non connesso";
-		}
-	return $msg;
-	}
-function execute($cmd = "")								// Esecuzione di un comando
-	{
-	$msg = "Messaggio\n".decrypt($cmd)."\nricevuto...";
+	$msg = "Messaggio\n" . decrypt($cmd) . "\nricevuto...";
 	echo encrypt($msg);
 	}
-function query($cmd = "", $crypt = true)				// Esecuzione di una query mysql
+
+function query($cmd = "", $crypt = true) // Esecuzione di una query mysql
 	{
 	global $pertdb, $host;
 	if($crypt)
-		$sql = decrypt($cmd);							// Legge il comando
+		$sql = decrypt($cmd); // Legge il comando
 	else
 		$sql = $cmd;
-	$c = null;											// Connessione
-	if ( isset($_SESSION['usr']) && isset($_SESSION['pwddb']))
-	 	{
-	 	try
-	 		{
-	 		$c = new PDO("mysql:host=$host;dbname=$pertdb", $_SESSION['usr'], $_SESSION['pwddb']);
-	 		$c->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+	$c = null; // Connessione
+	if(isset($_SESSION['usr']) && isset($_SESSION['pwddb']))
+		{
+		try
+			{
+			$c = new PDO("mysql:host=$host;dbname=$pertdb", $_SESSION['usr'], $_SESSION['pwddb']);
+			$c->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			try
 				{
 				$stmt = $c->prepare($sql);
@@ -340,11 +473,11 @@ function query($cmd = "", $crypt = true)				// Esecuzione di una query mysql
 				$result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 				if($result !== false)
 					{
-					$msg = "Query eseguita.\n";  
-					foreach($result as $r)
+					$msg = "Query eseguita.\n";
+					foreach ($result as $r)
 						{
-						foreach($r as $x)
-							$msg .= $x."\t";
+						foreach ($r as $x)
+							$msg .= $x . "\t";
 						$msg .= "\n";
 						}
 					}
@@ -353,168 +486,118 @@ function query($cmd = "", $crypt = true)				// Esecuzione di una query mysql
 					$msg = "Nessun risultato";
 					}
 				}
-			catch(PDOException $e)
+			catch (PDOException $e)
 				{
-				$msg = "Query error: ".$e->getMessage();
+				$msg = "Query error: " . $e->getMessage();
 				}
-	 		}
-	 	catch(PDOException $e)
-	 		{
+			}
+		catch (PDOException $e)
+			{
 			$msg = "WARNING: Connection error:\n";
-	 		$msg .= $e->getMessage();
-	 		}
-	 	$c = null;										// Disconnette dal database
+			$msg .= $e->getMessage();
+			}
+		$c = null; // Disconnette dal database
 		}
 	if($crypt)
 		$msg = encrypt($msg);
 	return $msg;
 	}
-function sqlcom($cmd = "", $crypt = true)				// Esecuzione di un comando mysql
+
+function sqlcom($cmd = "", $crypt = true) // Esecuzione di un comando mysql
 	{
 	global $pertdb, $host;
 	$msg = "";
 	if($crypt)
-		$sql = decrypt($cmd);							// Legge il comando
+		$sql = decrypt($cmd); // Legge il comando
 	else
 		$sql = $cmd;
-	$c = null;											// Connessione
-	if ( isset($_SESSION['usr']) && isset($_SESSION['pwddb']))
-	 	{
-	 	try
-	 		{
-	 		$c = new PDO("mysql:host=$host;dbname=$pertdb", $_SESSION['usr'], $_SESSION['pwddb']);
-	 		$c->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
+	$c = null; // Connessione
+	if(isset($_SESSION['usr']) && isset($_SESSION['pwddb']))
+		{
+		try
+			{
+			$c = new PDO("mysql:host=$host;dbname=$pertdb", $_SESSION['usr'], $_SESSION['pwddb']);
+			$c->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
 			try
 				{
 				$count = $c->exec($sql);
 				if($count !== false)
-					$msg = "Affected ".$count." rows.";
+					$msg = "Affected " . $count . " rows.";
 				else
 					$msg = "No rows affected";
 				}
-			catch(PDOException $e)
+			catch (PDOException $e)
 				{
-				$msg .= "Exec error: ".$e->getMessage();
+				$msg .= "Exec error: " . $e->getMessage();
 				}
-	 		}
-	 	catch(PDOException $e)
-	 		{
+			}
+		catch (PDOException $e)
+			{
 			$msg = "Connection error:\n";
-	 		$msg .= $e->getMessage();
-	 		}
-	 	$c = null;										// Disconnette dal database
+			$msg .= $e->getMessage();
+			}
+		$c = null; // Disconnette dal database
 		}
 	if($crypt)
 		$msg = encrypt($msg);
 	return $msg;
 	}
-function command()										// Lettura ed esecuzione di un comando (Post)
+
+function command() // Lettura ed esecuzione di un comando (Post)
 	{
 	$a = $_POST["a"];
 	$b = $_POST["b"];
 	$c = $_POST["c"];
-	switch($a)
+	switch ($a)
 		{
 		case "login":
-			echo login($b,$c);
+			{
+			$rsp = login($b, $c);
+			echo $rsp;
+			}
 			break;
 		case "logout":
 			echo logout();
 			break;
+		case "clearlogged":
+			echo clearlogged($b, $c);
+			break;
 		case "status":
-			echo refreshStat();
+			echo refreshStat(true);
 			break;
 		case "encode":
 			echo encrypt($b);
-			refresh();
+			refreshStat();
 			break;
 		case "decode":
 			echo decrypt($b);
-			refresh();
+			refreshStat();
 			break;
 		case "exe":
 			echo execute($b);
-			refresh();
+			refreshStat();
 			break;
 		case "query":
 			if($c == "nocrypt")
-				echo query($b,false);
+				echo query($b, false);
 			else
 				echo query($b);
-			refresh();
+			refreshStat();
 			break;
 		case "exec":
 			if($c == "nocrypt")
-				echo sqlcom($b,false);
+				echo sqlcom($b, false);
 			else
 				echo sqlcom($b);
-			refresh();
+			refreshStat();
 			break;
 		case "refresh":
-			echo refresh();		// echo refresh solo qui, per verificare connessione
+			echo refreshStat(); // echo refresh solo qui, per verificare connessione
 			break;
 		default:
 			echo "command unknown";
 			break;
 		}
 	}
-
-// function destroy($sessionId)
-// 	{
-// 	global $username, $password, $db_name, $host, $tbl_log, $sidColumn, $txtColumn;
-// 	$msg = "Session destroy, Session_ID: '$sessionId'\n";
-	// try
-	// 	{
-	// 	$conn = new PDO("mysql:host=$host;dbname=$db_name", $username, $password);
-	// 	$conn->setAttribute(PDO::ATTR_ERRMODE, PDO::ERRMODE_EXCEPTION);
-	// 	}
-	// catch(PDOException $e)
-	// 	{
-	// 	$msg = $e->getMessage();
-	// 	}
-	// 
-	// $sql = "INSERT INTO ".$tbl_log."(".$sidColumn.", ".$txtColumn.") VALUES('".$sessionId."','EXIT')";
-	// $msg .= $sql;
-	// try
-	// 	{
-	// 	$stmt = $conn->prepare($sql);
-	// 	$stmt->execute();
-	// 	}
-	// catch(PDOException $e)
-	// 	{
-	// 	$msg = "Error: ".$e->getMessage();
-	// 	}
-	// $conn = null;	
-// 	return true;
-// 	}
-
-// ATTENZIONE !!!
-// Tutti gli handler DEVONO ESSERE COMPLETATI, se no la sessione termina (almeno il read())
-// // function open($path, $name)
-// // 	{
-// // 	print "Session opened, path: $path, name: $name\n";
-// // 	return true;
-// // 	}
-// function close()
-// 	{
-// 	print "Session closed\n";
-// 	return true;
-// 	}
-// function read($sessionId)
-// 	{
-// 	print "Session read. Sess_ID: $sessionId\n";
-//     return '';
-// 	}
-// function write($sessionId, $data)
-// 	{
-// 	print "Session value written. Sess_ID: $sessionId, Data: $data\n";
-// 	return true;
-// 	}
-// function gc($lifetime)
-// 	{
-// 	print "Session garbage collection called. Lifetime: $lifetime\n";
-// 	return true;
-// 	}
-// function nop() {return true;}
-
+	
 ?>
