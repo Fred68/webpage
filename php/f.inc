@@ -4,6 +4,7 @@ $timeout = 60; // timeout in secondi
 $pausaWrong = 1; // Pausa se utente errato
 $sep = "*"; // Separatore
 $keystrval = "11111111111111111111111111111111"; // Password (fittizia) 32 caratteri
+$header_separator = "*\n*";
 
 $host = "127.0.0.1"; // Server name
 $username = "root"; // Mysql username DA CAMBIARE
@@ -250,7 +251,7 @@ function removeLoggedUser($uname, $con, &$err, &$msg, $sID = null) // Elimina tu
 
 function login($usr, $pwd) // Connette l'utente
 	{
-	global $username, $password, $db_name, $host, $usrColumn, $pwdColumn, $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn;
+	global $username, $password, $db_name, $host, $usrColumn, $pwdColumn, $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn, $header_separator;
 	$msg = "";
 	$err = "";
 	
@@ -292,7 +293,8 @@ function login($usr, $pwd) // Connette l'utente
 				$_SESSION['lastTime'] = time();
 				$_SESSION['keystr'] = $keystrval;
 				$_SESSION['pwddb'] = $pwddbval;
-				
+				if(isset($_SESSION['enabled']))						// Elimina variabile di abilitazione
+					unset($_SESSION['enabled']);
 				$ok = insertLoggedUser($myusername, session_id(), $conn, $err); // Inserisce l'utente nella lista degli utenti 'loggati'
 				if($ok == true)
 					{
@@ -310,32 +312,46 @@ function login($usr, $pwd) // Connette l'utente
 				}
 			}
 		}
-	
 	if($count < 1)
 		{
 		logout();
 		}
-	
 	$conn = null; // Disconnette dal database
-	#warning IMPOSTA LA VARIABILE DI SESSIONE Waiting a now()
-	// ....
-	// Invia risposta criptata (deve contenere $sID e utente, o altro)
-	
-	return "Errori: ".$err."\n".encrypt($msg);
-
-	// Poi usare un'altra funzione: unlock, che deve ricevere i dati ricevuti prima e confrontarli (criptati).
-	// confrontarli con le variabili si sessione, confronrtare now() con waiting e, se inferiore a qualche secondo,
-	// sbloccare waiting.
-	
+	$rt = "Errori: ".$err;
+	if(strlen($msg) > 0)
+			$rt .= $header_separator.encrypt($msg);
+	return $rt;	// Invia risposta codificata con user e session id criptati
+	#warning MANCA CONTROLLO TIMEOUT DEL CONTROLLO 'ENABLE'
 	}
 	
 	#warning AGGIUNGERE CLAUSOLA SU NOW()-LASTTIME > 2*TIMEOUT in removeLoggedUser
 	#warning RISCRIVERE MEGLIO TUTTA LA FUNZIONE ED ESAMINARE BENE I CASI (PROBABILE ERRORE). POI SEMPLIFICARE ED USARE FUNZIONI SEPARATE
-	#warning AGGIUNGERE, SE POSSIBILE, UNA RISPOSTA DI CONFERMA O DI DINIEGO (CRIPTATA) AL LOGIN, con necessità di risposta
 	#warning Nel primo login viene inviata la password su connessione non protetta.
-	#warning Prevedere handshaking dopo il primo login: se login ok -> invia risposta criptata e di mette in attesa -> poi riceve risposta criptata -> se errore: disconnette
 	#warning Inviare la password criptata non con sha1() ma con una funzione più complessa, e confrontarla con il valore criptato una seconda volta
 	#warning Risposta codificata al refresh per sapere se è ancora connesso o no (il programma in C# mostra se è connesso o no) 
+
+	#warning ATTENZIONE: la risposta restitutita da un'operazione (query, exec ecc...) deve essere criptata se il login è corretto ($_SESSION['enabled']==true
+	#warning ma in chiaro se il login non è corretto (almeno deve ricevere un messaggio di errore).
+	#warning FORMATTARE I VALORI RESTITUITI: n caratteri (o nulla) + '\n' + messaggio criptato in base64
+	#warning Aggiornato parzialmente il programma in C# con una funzione che interpreti il messaggio e lo divida in 2 (in C#).
+	
+function enable($enc_usr, $enc_sid)
+	{
+	$msg = "";
+	$dec_usr = decrypt($enc_usr);
+	$dec_sid = decrypt($enc_sid);
+	if( ($dec_sid == session_id()) && ($dec_usr == $_SESSION['usr']) )
+		{
+		$_SESSION['enabled'] = true;
+		$msg .= "Login eseguito";			// NON ARRIVA A QUESTA LINEA...PERCHE` IN C# NON DECRITTA CORRETTAMENTE SE KEYSTR ERRATA, E NON PROSEGUE
+		}
+	else
+		{
+		$msg .= "Login fallito";
+		logout();
+		}
+	return $msg;
+	}
 	
 function logout() // Disconnette l'utente
 	{
@@ -448,7 +464,11 @@ function refreshStat($stat = false) // Stato della connessione (se $stat==true: 
 
 function execute($cmd = "") // Esecuzione di un comando
 	{
-	$msg = "Messaggio\n" . decrypt($cmd) . "\nricevuto...";
+	#warning SPOSTARE il controllo in una funzione unica
+	if(isset($_SESSION['enabled']))
+		$msg = "Messaggio\n" . decrypt($cmd) . "\nricevuto...";
+	else
+		$msg = "Operazioni non abilitate";
 	echo encrypt($msg);
 	}
 
@@ -545,6 +565,7 @@ function sqlcom($cmd = "", $crypt = true) // Esecuzione di un comando mysql
 
 function command() // Lettura ed esecuzione di un comando (Post)
 	{
+	global $header_separator;
 	$a = $_POST["a"];
 	$b = $_POST["b"];
 	$c = $_POST["c"];
@@ -578,6 +599,8 @@ function command() // Lettura ed esecuzione di un comando (Post)
 			refreshStat();
 			break;
 		case "query":
+			echo "test risposta in chiaro"+$header_separator;
+			break;
 			if($c == "nocrypt")
 				echo query($b, false);
 			else
@@ -593,6 +616,9 @@ function command() // Lettura ed esecuzione di un comando (Post)
 			break;
 		case "refresh":
 			echo refreshStat(); // echo refresh solo qui, per verificare connessione
+			break;
+		case "enable":
+			echo enable($b, $c);
 			break;
 		default:
 			echo "command unknown";
