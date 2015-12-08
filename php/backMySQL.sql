@@ -19,6 +19,7 @@ USE `pert01`;
 CREATE TABLE IF NOT EXISTS `att` (
   `ID_att` bigint(20) unsigned NOT NULL AUTO_INCREMENT COMMENT 'pk indice',
   `Nome` varchar(50) DEFAULT NULL,
+  `Pos` varchar(20) DEFAULT NULL,
   `Inizio` datetime DEFAULT NULL COMMENT 'Inizio (data + orario)\n',
   `Durata` datetime DEFAULT '0000-00-00 01:00:00' COMMENT 'durata. Vedere se memorizzata correttamente. Deve essere >=0. Se zero: attività cardine.\\n\\n',
   `Fissa` tinyint(1) DEFAULT NULL COMMENT 'Se inizio non anticipabile',
@@ -26,16 +27,18 @@ CREATE TABLE IF NOT EXISTS `att` (
   `Eliminare` tinyint(1) DEFAULT NULL COMMENT 'Flag, attività da cancellare (anche se non cancellata). Il numero dell ID può esser riciclato.',
   PRIMARY KEY (`ID_att`),
   UNIQUE KEY `ID_att_UNIQUE` (`ID_att`)
-) ENGINE=InnoDB AUTO_INCREMENT=6 DEFAULT CHARSET=latin1;
+) ENGINE=InnoDB AUTO_INCREMENT=101 DEFAULT CHARSET=latin1;
 
--- Dump dei dati della tabella pert01.att: ~4 rows (circa)
+-- Dump dei dati della tabella pert01.att: ~5 rows (circa)
 /*!40000 ALTER TABLE `att` DISABLE KEYS */;
-INSERT INTO `att` (`ID_att`, `Nome`, `Inizio`, `Durata`, `Fissa`, `Annullata`, `Eliminare`) VALUES
-	(1, 'Inizio', '2015-10-19 23:11:47', '0000-00-01 00:00:00', 0, NULL, NULL),
-	(2, 'aaa', NULL, '0000-00-02 00:00:00', 0, NULL, NULL),
-	(3, 'bbb', NULL, '0000-00-00 10:00:00', 0, NULL, NULL),
-	(4, 'a+b', NULL, '0000-00-00 00:00:00', 0, NULL, NULL),
-	(5, 'FINE', NULL, '0000-00-00 01:00:00', NULL, NULL, NULL);
+INSERT INTO `att` (`ID_att`, `Nome`, `Pos`, `Inizio`, `Durata`, `Fissa`, `Annullata`, `Eliminare`) VALUES
+	(1, 'Inizio', '0.0', '2015-10-19 23:11:47', '0000-00-01 00:00:00', 0, NULL, NULL),
+	(2, 'aaa', '1.1', NULL, '0000-00-02 00:00:00', 1, NULL, NULL),
+	(3, 'bbb', '1.2', NULL, '0000-00-00 10:00:00', 0, NULL, NULL),
+	(4, 'a+b', '2.0', NULL, '0000-00-00 00:00:00', 0, NULL, 1),
+	(5, 'FINE', 'F', NULL, '0000-00-00 01:00:00', NULL, NULL, NULL),
+	(6, 'extra', '3.0.1', NULL, '0000-00-00 00:00:00', NULL, NULL, NULL),
+	(100, 'extra', '3.0.1', NULL, '0000-00-00 00:00:00', NULL, NULL, NULL);
 /*!40000 ALTER TABLE `att` ENABLE KEYS */;
 
 
@@ -70,6 +73,7 @@ CREATE TABLE IF NOT EXISTS `logged` (
   `sid` char(32) NOT NULL DEFAULT '1' COMMENT 'session id (pk)',
   `usrname` varchar(65) NOT NULL COMMENT 'utente',
   `lgtm` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT 'login time',
+  `lstlg` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT 'last log time',
   PRIMARY KEY (`sid`,`usrname`)
 ) ENGINE=InnoDB DEFAULT CHARSET=latin1;
 

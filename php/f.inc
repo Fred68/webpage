@@ -16,20 +16,20 @@ $pertdb = "pert01"; // Nome database del pert (eventualmente identico)
 $tbl_name = "members"; // Tabella utenti
 $tbl_log = "logged"; // Tabella log
 
-$pwdColumn = "passwd"; // Nome della colonna con la password criptata
-$keystr = "keystr"; // Nome colonna con chiave di criptatura
-$pwddb = "pwddb"; // Nome colonna con password database
-$usrColumn = "usrname"; // Nome della colonna utente (anche per la tabella $tbl_log)
-$sidColumn = "sid"; // Nome della colonna con session_id
-$lgtmColumn = "lgtm"; // Nome della colonna con log time
-$lstlgColumn = "lstlg";
- // Nome della colonna con last log
-function serverPost($t1, $t2, $sec) // FUNZIONE DI PROVA
-	{
-	sleep($sec);
-	$txt = $t1 . "\n" . $t2 . "\n" . microtime();
-	return $txt;
-	}
+$pwdColumn = "passwd"; 		// Nome della colonna con la password criptata
+$keystr = "keystr"; 		// Nome colonna con chiave di criptatura
+$pwddb = "pwddb"; 			// Nome colonna con password database
+$usrColumn = "usrname"; 	// Nome della colonna utente (anche per la tabella $tbl_log)
+$sidColumn = "sid"; 		// Nome della colonna con session_id
+$lgtmColumn = "lgtm";		// Nome della colonna con log time
+$lstlgColumn = "lstlg";		// Nome della colonna con last log
+
+// function serverPost($t1, $t2, $sec) // FUNZIONE DI PROVA
+// 	{
+// 	sleep($sec);
+// 	$txt = $t1 . "\n" . $t2 . "\n" . microtime();
+// 	return $txt;
+// 	}
 
 function addpadding($string, $blocksize = 32) // Aggiunge padding PKCS7
 	{ // Thanks to http://blog.djekldevelopments.co.uk/?p=334)
@@ -249,6 +249,11 @@ function removeLoggedUser($uname, $con, &$err, &$msg, $sID = null) // Elimina tu
 	return $ok;
 	}
 
+function isEnabled()
+	{
+	return isset($_SESSION['enabled']);
+	}
+	
 function login($usr, $pwd) // Connette l'utente
 	{
 	global $username, $password, $db_name, $host, $usrColumn, $pwdColumn, $tbl_name, $keystr, $keystrval, $pwddb, $tbl_log, $sidColumn, $txtColumn, $header_separator;
@@ -317,7 +322,9 @@ function login($usr, $pwd) // Connette l'utente
 		logout();
 		}
 	$conn = null; // Disconnette dal database
-	$rt = "Errori: ".$err;
+	$rt = "";
+	if(strlen($err) > 0)
+		$rt = "Errori: ".$err;
 	if(strlen($msg) > 0)
 			$rt .= $header_separator.encrypt($msg);
 	return $rt;	// Invia risposta codificata con user e session id criptati
@@ -332,7 +339,7 @@ function login($usr, $pwd) // Connette l'utente
 
 	#warning ATTENZIONE: la risposta restitutita da un'operazione (query, exec ecc...) deve essere criptata se il login è corretto ($_SESSION['enabled']==true
 	#warning ma in chiaro se il login non è corretto (almeno deve ricevere un messaggio di errore).
-	#warning FORMATTARE I VALORI RESTITUITI: n caratteri (o nulla) + '\n' + messaggio criptato in base64
+	#warning FORMATTARE I VALORI RESTITUITI: n caratteri (o nulla) + separatore + messaggio criptato in base64
 	#warning Aggiornato parzialmente il programma in C# con una funzione che interpreti il messaggio e lo divida in 2 (in C#).
 	
 function enable($enc_usr, $enc_sid)
@@ -465,10 +472,10 @@ function refreshStat($stat = false) // Stato della connessione (se $stat==true: 
 function execute($cmd = "") // Esecuzione di un comando
 	{
 	#warning SPOSTARE il controllo in una funzione unica
-	if(isset($_SESSION['enabled']))
-		$msg = "Messaggio\n" . decrypt($cmd) . "\nricevuto...";
-	else
+	if(!isEnabled())
 		$msg = "Operazioni non abilitate";
+	else
+		$msg = "Messaggio\n" . decrypt($cmd) . "\nricevuto...";
 	echo encrypt($msg);
 	}
 
@@ -571,53 +578,49 @@ function command() // Lettura ed esecuzione di un comando (Post)
 	$c = $_POST["c"];
 	switch ($a)
 		{
-		case "login":
-			{
+		case "login":					// Login
 			$rsp = login($b, $c);
 			echo $rsp;
-			}
 			break;
-		case "logout":
+		case "logout":					// Logout
 			echo logout();
 			break;
-		case "clearlogged":
+		case "clearlogged":				// Clear logged
 			echo clearlogged($b, $c);
 			break;
-		case "status":
+		case "status":					// Stato
 			echo refreshStat(true);
 			break;
-		case "encode":
+		case "encode":					// Codifica (per prova)
 			echo encrypt($b);
 			refreshStat();
 			break;
-		case "decode":
+		case "decode":					// Decodifica (per prova)
 			echo decrypt($b);
 			refreshStat();
 			break;
-		case "exe":
+		case "exe":						// Risponde ad unm messaggio (per prova)
 			echo execute($b);
 			refreshStat();
 			break;
-		case "query":
-			echo "test risposta in chiaro"+$header_separator;
-			break;
+		case "query":					// Esegue query MySQL
 			if($c == "nocrypt")
 				echo query($b, false);
 			else
 				echo query($b);
 			refreshStat();
 			break;
-		case "exec":
+		case "exec":					// Esegue comando MySQL
 			if($c == "nocrypt")
 				echo sqlcom($b, false);
 			else
 				echo sqlcom($b);
 			refreshStat();
 			break;
-		case "refresh":
+		case "refresh":					// Refresh
 			echo refreshStat(); // echo refresh solo qui, per verificare connessione
 			break;
-		case "enable":
+		case "enable":					// Abilita operazioni MySQL
 			echo enable($b, $c);
 			break;
 		default:
